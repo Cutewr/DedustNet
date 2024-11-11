@@ -318,11 +318,17 @@ class DWT(nn.Module):
 		self.dwt = DWTForward(J=1, wave='db1', mode='zero')
 
 	def forward(self, x):
+		# 得到低频部分yl和高频系数列表yh。其中yh是一个长度为J的列表，第一个元素是最精细尺度的高频系数。
 		yl, yh = self.dwt(x)
 		#print(yl.size())
+		# 获取低频部分yl的维度信息，包括批次大小b、通道数c、高度h和宽度w。
 		b, c, h, w = yl.size()
+		# 对于高频系数列表yh中的每个元素：
+		# 首先使用permute方法对维度进行调整，然后使用reshape方法将其形状调整为(b, c * 3, h, w)。
+		# 这里的c * 3表示将三个方向（水平、垂直、对角）的高频系数合并为一个张量，每个方向对应c个通道。
 		for i in range(len(yh)):
 			yh_re = yh[i].permute(0, 2, 1, 3, 4).reshape(b, c * 3, h, w)
+		# 将调整后的低频部分yl和高频系数（经过处理后的yh_re）在通道维度上进行拼接，得到最终的输出张量y并返回。
 		y = torch.cat((yl, yh_re), 1)
 		#print(y.size())
 		return y

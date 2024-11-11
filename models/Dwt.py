@@ -3,6 +3,7 @@ import pywt
 import pytorch_wavelets.dwt.lowlevel as lowlevel
 import torch
 
+# 二维离散小波变换DWT(Discrete Wavelet Transform)的前向分解
 class DWTForward(nn.Module):
     """ Performs a 2d DWT Forward decomposition of an image
 
@@ -11,12 +12,14 @@ class DWTForward(nn.Module):
         wave (str or pywt.Wavelet or tuple(ndarray)): Which wavelet to use.
             Can be:
             1) a string to pass to pywt.Wavelet constructor
-            2) a pywt.Wavelet class
+            2) a pywt.Wavelet class 提取其低通和高通滤波器系数用于列和行方向
             3) a tuple of numpy arrays, either (h0, h1) or (h0_col, h1_col, h0_row, h1_row)
         mode (str): 'zero', 'symmetric', 'reflect' or 'periodization'. The
+            长度为2或4的元祖 分别对应不同滤波器系数设置
             padding scheme
 
         """
+    # J：分解的层数
     def __init__(self, J=1, wave='db1', mode='zero'):
         super().__init__()
         if isinstance(wave, str):
@@ -34,7 +37,9 @@ class DWTForward(nn.Module):
                 h0_row, h1_row = wave[2], wave[3]
 
         # Prepare the filters
+        # 使用prep_filt_afb2d函数准备滤波器
         filts = lowlevel.prep_filt_afb2d(h0_col, h1_col, h0_row, h1_row)
+        # 并将其注册为缓冲区，以便在模型的不同调用中保持不变
         self.register_buffer('h0_col', filts[0])
         self.register_buffer('h1_col', filts[1])
         self.register_buffer('h0_row', filts[2])
@@ -61,16 +66,23 @@ class DWTForward(nn.Module):
             :math:`H_{in}', W_{in}', H_{in}'', W_{in}''` denote the correctly
             downsampled shapes of the DWT pyramid.
         """
+        # 接受输入张量x (N,C_in,H_in,W_in)
+        # 空列表yh用于存储高频系数
         yh = []
+        # ll表示低频系数
         ll = x
+        # mode转换为整数表示填充方案
         mode = lowlevel.mode_to_int(self.mode)
 
         # Do a multilevel transform
+        # 对每个分解层J
         for j in range(self.J):
             # Do 1 level of the transform
+            # 对ll进行一层离散小波变换，得到低频部分ll和高频部分high
             ll, high = lowlevel.AFB2D.apply(
                 ll, self.h0_col, self.h1_col, self.h0_row, self.h1_row, mode)
             #print(high.shape)
+            # 高频部分由多个不同方向的细节信息组成
             yh.append(high)
 
         return ll, yh
