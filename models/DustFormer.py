@@ -275,7 +275,7 @@ class TransformerBlock(nn.Module):
 		x = identity + x
 		return x
 
-
+# 利用离散小波变换将图像分解为不同频率的子带
 class DwtViTBlock(nn.Module):
 	def __init__(self, network_depth, dim, depth, num_heads, mlp_ratio=4.,
 				 norm_layer=nn.LayerNorm, window_size=8,
